@@ -16,17 +16,51 @@ app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.xfp4g.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+function verifyJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send({ message: 'Unauthorized access.' });
+  }
+  const token = authHeader.split(' ')[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECREAT, function (err, decoded) {
+    if (err) {
+      return res.status(403), send({ message: 'Forbiden Access' })
+    }
+    req.decoded = decoded;
+    next();
+  });
+}
+
+
 
 async function run() {
   try {
 
     await client.connect();
+
     const partsCollection = client.db('auto_parts_manufactures').collection('parts');
     const userCollection = client.db('auto_parts_manufactures').collection('users');
     const orderCollection = client.db('auto_parts_manufactures').collection('orders');
 
+
+
+    const verifyAdmin = async (req, res, next) => {
+      const requester = req.decoded.email;
+      const requesterAccount = await userCollection.findOne({ email: requester });
+      if (requesterAccount.role === 'admin') {
+        next();
+      }
+      else {
+        res.status(403).send({ message: 'forbidden' });
+      }
+
+    }
+
+
+
+
     //putting parts in the db
-    app.post('/parts', async (req, res) => {
+    app.post('/parts', verifyJWT, verifyAdmin, async (req, res) => {
       const parts = req.body;
       const query = { name: parts.name, description: parts.description, availableQuantity: parts.availableQuantity, minOrderQuantity: parts.minOrderQuantity, unitPrice: parts.unitPrice, img: parts.img };
       const exist = await partsCollection.findOne(query);
@@ -38,7 +72,7 @@ async function run() {
     });
 
     //get all parts to show
-    app.get('/parts', async (req, res) => {
+    app.get('/parts', verifyJWT, async (req, res) => {
       const query = {};
       const cursor = partsCollection.find(query);
       const parts = await cursor.toArray();
@@ -46,7 +80,7 @@ async function run() {
     });
 
     //geeting single part for purchase
-    app.get('/parts/:id', async (req, res) => {
+    app.get('/parts/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const part = await partsCollection.findOne(query);
@@ -55,7 +89,7 @@ async function run() {
 
 
     //updating the quantity after purchase
-    app.put('/parts/:id', async (req, res) => {
+    app.put('/parts/:id', verifyJWT, async (req, res) => {
       const id = req.params.id;
       const requestedQuantity = req.body.quantity;
 
@@ -79,7 +113,7 @@ async function run() {
 
 
     //make user 
-    app.put('/user/:email', async (req, res) => {
+    app.put('/user/:email',  async (req, res) => {
       const email = req.params.email;
       const user = req.body;
       const filter = { email: email };
@@ -93,7 +127,7 @@ async function run() {
     });
 
     //chacking admin 
-    app.get('/admin/:email', async (req, res) => {
+    app.get('/admin/:email', verifyJWT, verifyAdmin, async (req, res) => {
       const email = req.params.email;
       const user = await userCollection.findOne({ email: email });
       const isAdmin = user.role === 'admin';
@@ -101,19 +135,38 @@ async function run() {
     });
 
     //orderCollection 
-    app.post('/orders', async (req, res) => {
+    app.post('/orders', verifyJWT, async (req, res) => {
       const order = req.body;
       const result = await orderCollection.insertOne(order);
       return res.send({ success: true, result });
     });
 
     //getting all orders of a user
-    app.get('/orders/:email', async (req, res) => {
+    app.get('/orders/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
       const orders = await orderCollection.find({ email: email }).toArray();
      
       res.send(orders);
-    })
+    });
+
+     //getting all orders
+     app.get('/orders', verifyJWT, verifyAdmin, async (req, res) => {
+      const orders = await orderCollection.find().toArray();
+      res.send(orders);
+    });
+
+    //updating status of a order
+    app.put('/orders/:id', verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const order = req.body;
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: order,
+      };
+      const result = await orderCollection.updateOne(filter, updatedDoc, options);
+      res.send( result);
+    });
 
   }
   finally {
