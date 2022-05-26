@@ -23,6 +23,7 @@ async function run() {
     await client.connect();
     const partsCollection = client.db('auto_parts_manufactures').collection('parts');
     const userCollection = client.db('auto_parts_manufactures').collection('users');
+    const orderCollection = client.db('auto_parts_manufactures').collection('orders');
 
     //putting parts in the db
     app.post('/parts', async (req, res) => {
@@ -91,6 +92,20 @@ async function run() {
       res.send({ result, token });
     });
 
+    //chacking admin 
+    app.get('/admin/:email', async (req, res) => {
+      const email = req.params.email;
+      const user = await userCollection.findOne({ email: email });
+      const isAdmin = user.role === 'admin';
+      res.send(isAdmin);
+    });
+
+    //orderCollection 
+    app.post('/orders', async (req, res) => {
+      const order = req.body;
+      const result = await orderCollection.insertOne(order);
+      return res.send({ success: true, result });
+    });
 
   }
   finally {
