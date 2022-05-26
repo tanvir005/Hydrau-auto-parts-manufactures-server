@@ -22,6 +22,7 @@ async function run() {
 
     await client.connect();
     const partsCollection = client.db('auto_parts_manufactures').collection('parts');
+    const userCollection = client.db('auto_parts_manufactures').collection('users');
 
     //putting parts in the db
     app.post('/parts', async (req, res) => {
@@ -70,12 +71,25 @@ async function run() {
         },
       };
       const result = await partsCollection.updateOne(filter, updatedDoc, options);
-      
-      res.send( result);
+
+      res.send(result);
     });
 
 
 
+    //make user 
+    app.put('/user/:email', async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      const filter = { email: email };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: user,
+      };
+      const result = await userCollection.updateOne(filter, updatedDoc, options);
+      const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECREAT, { expiresIn: '1d' });
+      res.send({ result, token });
+    });
 
 
   }
