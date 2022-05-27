@@ -203,7 +203,16 @@ async function run() {
       const filter = { email: email };
       const result = await userCollection.deleteOne(filter);
       res.send(result);
+    });
+
+    //delete parts
+    app.delete('/parts/:id', verifyJWT, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await partsCollection.deleteOne(filter);
+      res.send(result);
     })
+
     
 
     //getting all orders of a user 
