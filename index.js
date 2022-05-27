@@ -24,7 +24,7 @@ function verifyJWT(req, res, next) {
   const token = authHeader.split(' ')[1];
   jwt.verify(token, process.env.ACCESS_TOKEN_SECREAT, function (err, decoded) {
     if (err) {
-      return res.status(403), send({ message: 'Forbiden Access' })
+      return res.status(403).send({ message: 'Forbiden Access' })
     }
     req.decoded = decoded;
     next();
@@ -41,6 +41,7 @@ async function run() {
     const partsCollection = client.db('auto_parts_manufactures').collection('parts');
     const userCollection = client.db('auto_parts_manufactures').collection('users');
     const orderCollection = client.db('auto_parts_manufactures').collection('orders');
+    const reviewCollection = client.db('auto_parts_manufactures').collection('reviews');
 
 
 
@@ -72,7 +73,7 @@ async function run() {
     });
 
     //get all parts to show
-    app.get('/parts', verifyJWT, async (req, res) => {
+    app.get('/parts', async (req, res) => {
       const query = {};
       const cursor = partsCollection.find(query);
       const parts = await cursor.toArray();
@@ -126,8 +127,8 @@ async function run() {
       res.send({ result, token });
     });
 
-    //chacking admin 
-    app.get('/admin/:email', verifyJWT, verifyAdmin, async (req, res) => {
+      //checking admin from database
+    app.get('/admin/:email', async (req, res) => {
       const email = req.params.email;
       const user = await userCollection.findOne({ email: email });
       const isAdmin = user.role === 'admin';
@@ -140,6 +141,14 @@ async function run() {
       const result = await orderCollection.insertOne(order);
       return res.send({ success: true, result });
     });
+
+    //reviews
+    app.post('/reviews', verifyJWT, async (req, res) => {
+      const review = req.body;
+      const result = await reviewCollection.insertOne(review);
+      return res.send({ success: true, result });
+    });
+    
 
     //getting all orders of a user 
     app.get('/orders/:email', verifyJWT, async (req, res) => {
@@ -167,6 +176,9 @@ async function run() {
       const result = await orderCollection.updateOne(filter, updatedDoc, options);
       res.send( result);
     });
+
+  
+   
 
   }
   finally {
