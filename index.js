@@ -141,7 +141,7 @@ async function run() {
       return res.send({ success: true, result });
     });
 
-    //getting all orders of a user
+    //getting all orders of a user 
     app.get('/orders/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
       const orders = await orderCollection.find({ email: email }).toArray();
@@ -149,7 +149,7 @@ async function run() {
       res.send(orders);
     });
 
-     //getting all orders
+     //getting all orders form db
      app.get('/orders', verifyJWT, verifyAdmin, async (req, res) => {
       const orders = await orderCollection.find().toArray();
       res.send(orders);
