@@ -190,7 +190,7 @@ async function run() {
 run().catch(console.dir);
 
 app.get('/', (req, res) => {
-  res.send('auto_parts_manufactures server running')
+  res.send('auto_parts_manufactures server running perfectly')
 })
 
 app.listen(port, () => {
