@@ -128,7 +128,7 @@ async function run() {
     });
 
     //update a user  profile
-    app.put('/updateuser/:email', verifyJWT,  async (req, res) => {
+    app.put('/updateuser/:email',  async (req, res) => {
       const email = req.params.email;
       const user = req.body;
       const filter = { email: email };
@@ -214,7 +214,7 @@ async function run() {
     })
 
       //delete order
-      app.delete('/order/:id', verifyJWT,  async (req, res) => {
+      app.delete('/order/:id', verifyJWT, verifyAdmin,  async (req, res) => {
         const id = req.params.id;
         const filter = { _id: ObjectId(id) };
         const result = await orderCollection.deleteOne(filter);
@@ -251,6 +251,27 @@ async function run() {
       res.send( result);
     });
 
+    //updating the quantity bt admin
+
+    app.put('/partsupdate/:id', verifyJWT, async (req, res) => {
+      const id = req.params.id;
+      const requestedQuantity = req.body.quantity;
+      const filter = { _id: ObjectId(id) };
+      const part = await partsCollection.findOne(filter);
+      const quantity = parseFloat( part.availableQuantity);
+      const newQuantity = quantity + parseFloat(requestedQuantity);
+
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set:
+        {
+          availableQuantity: newQuantity
+        },
+      };
+      const result = await partsCollection.updateOne(filter, updatedDoc, options);
+
+      res.send(result);
+    });
   
    
 
