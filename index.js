@@ -48,7 +48,7 @@ async function run() {
     const verifyAdmin = async (req, res, next) => {
       const requester = req.decoded.email;
       const requesterAccount = await userCollection.findOne({ email: requester });
-      if (requesterAccount.role === 'admin') {
+      if (requesterAccount?.role === 'admin') {
         next();
       }
       else {
@@ -127,12 +127,53 @@ async function run() {
       res.send({ result, token });
     });
 
+    //update a user  profile
+    app.put('/updateuser/:email', verifyJWT,  async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      const filter = { email: email };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: user,
+      };
+      const result = await userCollection.updateOne(filter, updatedDoc, options);
+     
+      res.send(result);
+    });
+
+    //get single user
+    app.get('/user/:email', verifyJWT,  async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const result = await userCollection.findOne(filter);
+      res.send(result);
+    });
+
+     //get all user
+     app.get('/user', verifyJWT, verifyAdmin, async (req, res) => {
+      const users = await userCollection.find().toArray();
+      res.send(users);
+    });
+
       //checking admin from database
     app.get('/admin/:email', async (req, res) => {
       const email = req.params.email;
       const user = await userCollection.findOne({ email: email });
-      const isAdmin = user.role === 'admin';
+      const isAdmin = user?.role === 'admin';
       res.send(isAdmin);
+    });
+
+    //make admin
+    app.put('/user/admin/:email', verifyJWT, verifyAdmin, async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const updatedDoc = {
+        $set: { role: 'admin' },
+      };
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+
+
     });
 
     //orderCollection 
@@ -142,12 +183,27 @@ async function run() {
       return res.send({ success: true, result });
     });
 
-    //reviews
+    //add reviews
     app.post('/reviews', verifyJWT, async (req, res) => {
       const review = req.body;
       const result = await reviewCollection.insertOne(review);
       return res.send({ success: true, result });
     });
+
+    //get reviews
+    app.get('/reviews',verifyJWT, async (req, res) =>{
+      const query = {};
+      const result = await reviewCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    //delete users
+    app.delete('/user/:email', verifyJWT, verifyAdmin, async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const result = await userCollection.deleteOne(filter);
+      res.send(result);
+    })
     
 
     //getting all orders of a user 
