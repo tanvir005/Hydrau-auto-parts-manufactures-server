@@ -258,9 +258,10 @@ async function run() {
       const requestedQuantity = req.body.quantity;
       const filter = { _id: ObjectId(id) };
       const part = await partsCollection.findOne(filter);
-      const quantity = parseFloat( part.availableQuantity);
-      const newQuantity = quantity + parseFloat(requestedQuantity);
+      const quantity = parseInt( part.availableQuantity);
+      const newQuantity = quantity + parseInt(requestedQuantity);
 
+      // console.log(quantity, newQuantity);
       const options = { upsert: true };
       const updatedDoc = {
         $set:
