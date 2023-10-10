@@ -18,5 +18,11 @@
                 "OPTIONS"
             ]
         }
+    ],
+    "rewrites": [
+        {
+            "source": "/(.*)",
+            "destination": "/"
+        }
     ]
 }
